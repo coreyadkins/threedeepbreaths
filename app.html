@@ -1,0 +1,162 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Hello World</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
+  <script src="https://unpkg.com/react@latest/dist/react.js"></script>
+  <script src="https://unpkg.com/react-dom@latest/dist/react-dom.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+  <style>
+    .app-holder {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .nav {
+      display: inline-block;
+      color: blue;
+      text-align: center;
+      width: 50%;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .article-content {
+      margin-top: 4rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="example"></div>
+  <script type="text/babel">
+  var WPShoutArticle = React.createClass({
+    getInitialState: function() {
+      return {
+        articleIndex: 0,
+        articleLink: '',
+        articleTitle: '',
+        articleContent: ''
+      };
+    },
+
+   componentDidMount: function() {
+      this.state.serverRequest = $.get(this.props.source, function (result) {
+        this.state.fetchedContent = result;
+        this.loadContent();
+      }.bind(this));
+    },
+
+    loadContent: function( articleIndex ) {
+      if (articleIndex === undefined) {
+        var articleIndex = this.state.articleIndex;
+      }
+
+      var currentArticle = this.state.fetchedContent[articleIndex];
+      this.setState({
+        articleLink: currentArticle.link,
+        articleTitle: currentArticle.title.rendered,
+        articleContent: currentArticle.content.rendered
+      });
+    },
+
+    componentWillUnmount: function() {
+      this.serverRequest.abort();
+    },
+
+    openPrevArticle: function() {
+      var currentIndex = this.state.articleIndex - 1;
+
+      // Not past the limit
+      if( currentIndex < 0 ) {
+        currentIndex = 0;
+      }
+
+
+      this.setState({
+          articleIndex: currentIndex
+      }, );
+      this.loadContent( currentIndex );
+    },
+
+    openNextArticle: function() {
+      var currentIndex = this.state.articleIndex + 1;
+      
+      var articleCount = this.state.fetchedContent.length;
+
+      // Not past the limit
+      if( currentIndex >= articleCount ) {
+        currentIndex = articleCount - 1;
+      }
+
+      this.loadContent( currentIndex );
+
+      this.setState({
+          articleIndex: currentIndex
+      });
+    },
+
+    render: function() {
+      return (
+        <div className="app-holder">
+          <WPShoutPrev reactToClick={this.openPrevArticle} />
+          <WPShoutNext reactToClick={this.openNextArticle} />
+          <div className="article-content">
+            <WPShoutTitle title={this.state.articleTitle} />
+            <WPShoutContent content={this.state.articleContent} />
+          </div>
+        </div>
+      );
+    }
+  });
+
+  var WPShoutNext = React.createClass({
+    render: function(){
+        return (
+            <div className="nav" onClick={this.props.reactToClick}>
+              <span>Next Article</span>
+            </div>
+        );
+    }
+  });
+
+  var WPShoutPrev = React.createClass({
+    render: function(){
+        return (
+            <div className="nav" onClick={this.props.reactToClick}>
+              <span>Prev Article</span>
+            </div>
+        );
+    }
+  });
+
+
+  var WPShoutTitle = React.createClass({
+      render: function(){
+          return (
+              <h1>              
+                  {this.props.title}
+              </h1>
+          );
+      }
+  })
+
+  var WPShoutContent = React.createClass({
+    render: function(){
+        return (
+            <div>
+              <div dangerouslySetInnerHTML={{__html: this.props.content }} />
+            </div>
+        );
+    }
+  });
+   
+  ReactDOM.render(
+    <WPShoutArticle source="https://wpshout.com/wp-json/wp/v2/posts" />,
+  document.getElementById('example')
+  );
+  </script>
+
+</body>
+</html>
