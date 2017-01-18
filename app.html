@@ -2,161 +2,105 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Hello World</title>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
-  <script src="https://unpkg.com/react@latest/dist/react.js"></script>
-  <script src="https://unpkg.com/react-dom@latest/dist/react-dom.js"></script>
-  <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
-  <style>
-    .app-holder {
-      max-width: 800px;
-      margin: 0 auto;
-    }
+	<meta charset="UTF-8" />
+	<title>Hello World</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
+	<script src="https://unpkg.com/react@latest/dist/react.js"></script>
+	<script src="https://unpkg.com/react-dom@latest/dist/react-dom.js"></script>
+	<script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+	<style>
+		body {
+			margin: 0;
+		}
 
-    .nav {
-      display: inline-block;
-      color: blue;
-      text-align: center;
-      width: 50%;
-      font-weight: bold;
-      cursor: pointer;
-    }
+		.breath-countdown {
+			background: #eee;
+			font-size: 30vh;
+			display: flex;
+			align-items: center;
+			height: 100vh;
+			justify-content: space-around;
+		}
 
-    .article-content {
-      margin-top: 4rem;
-    }
-  </style>
+		.counter {
+			transition: all 2s linear;
+			/*transition: all 8s;*/
+			/*transition: all 2s;*/
+		}
+
+		.counter.fading-out {
+			opacity: 0;
+		}
+
+	</style>
 </head>
 <body>
-  <div id="example"></div>
-  <script type="text/babel">
-  var WPShoutArticle = React.createClass({
-    getInitialState: function() {
-      return {
-        articleIndex: 0,
-        articleLink: '',
-        articleTitle: '',
-        articleContent: ''
-      };
-    },
+	<div id="app"></div>
+	<script type="text/babel">
+	var ThreeDeepBreaths = React.createClass({
+		getInitialState: function() {
+			return {
+				seconds: 0,
+				breathDuration: 8,
+				breathCount: 3
+			};
+		},
 
-   componentDidMount: function() {
-      this.state.serverRequest = $.get(this.props.source, function (result) {
-        this.state.fetchedContent = result;
-        this.loadContent();
-      }.bind(this));
-    },
+		componentDidMount: function() {
+			setInterval(function() {
+				this.setState({
+					seconds: this.state.seconds + 1
+				});
+			}.bind(this),1000);
+		}, 
 
-    loadContent: function( articleIndex ) {
-      if (articleIndex === undefined) {
-        var articleIndex = this.state.articleIndex;
-      }
+		componentWillUnmount: function() {
+			this.serverRequest.abort();
+		},
 
-      var currentArticle = this.state.fetchedContent[articleIndex];
-      this.setState({
-        articleLink: currentArticle.link,
-        articleTitle: currentArticle.title.rendered,
-        articleContent: currentArticle.content.rendered
-      });
-    },
+		printBreath: function() {
+			return 1 + Math.floor( this.state.seconds / this.state.breathDuration );
+		},
 
-    componentWillUnmount: function() {
-      this.serverRequest.abort();
-    },
+		counterClass: function() {
+			var addClass = '';
+			if( this.state.seconds % this.state.breathDuration >= this.state.breathDuration * .75 ) {
+				addClass = ' fading-out';
+			}
 
-    openPrevArticle: function() {
-      var currentIndex = this.state.articleIndex - 1;
+			return 'counter' + addClass;
+		},
 
-      // Not past the limit
-      if( currentIndex < 0 ) {
-        currentIndex = 0;
-      }
+		render: function() {
+			if( this.state.seconds < this.state.breathDuration * this.state.breathCount ) {
+				return (
+					<div className="breath-countdown">
+						<div className={ this.counterClass() }>{ this.printBreath() }</div>
+					</div>
+				);
+			} else {
+				return (
+					<div className="breath-countdown">
+						<Content content="ayy" />
+					</div>
+				);
+			}
+		}
+	});
 
-
-      this.setState({
-          articleIndex: currentIndex
-      }, );
-      this.loadContent( currentIndex );
-    },
-
-    openNextArticle: function() {
-      var currentIndex = this.state.articleIndex + 1;
-      
-      var articleCount = this.state.fetchedContent.length;
-
-      // Not past the limit
-      if( currentIndex >= articleCount ) {
-        currentIndex = articleCount - 1;
-      }
-
-      this.loadContent( currentIndex );
-
-      this.setState({
-          articleIndex: currentIndex
-      });
-    },
-
-    render: function() {
-      return (
-        <div className="app-holder">
-          <WPShoutPrev reactToClick={this.openPrevArticle} />
-          <WPShoutNext reactToClick={this.openNextArticle} />
-          <div className="article-content">
-            <WPShoutTitle title={this.state.articleTitle} />
-            <WPShoutContent content={this.state.articleContent} />
-          </div>
-        </div>
-      );
-    }
-  });
-
-  var WPShoutNext = React.createClass({
-    render: function(){
-        return (
-            <div className="nav" onClick={this.props.reactToClick}>
-              <span>Next Article</span>
-            </div>
-        );
-    }
-  });
-
-  var WPShoutPrev = React.createClass({
-    render: function(){
-        return (
-            <div className="nav" onClick={this.props.reactToClick}>
-              <span>Prev Article</span>
-            </div>
-        );
-    }
-  });
-
-
-  var WPShoutTitle = React.createClass({
-      render: function(){
-          return (
-              <h1>              
-                  {this.props.title}
-              </h1>
-          );
-      }
-  })
-
-  var WPShoutContent = React.createClass({
-    render: function(){
-        return (
-            <div>
-              <div dangerouslySetInnerHTML={{__html: this.props.content }} />
-            </div>
-        );
-    }
-  });
-   
-  ReactDOM.render(
-    <WPShoutArticle source="https://wpshout.com/wp-json/wp/v2/posts" />,
-  document.getElementById('example')
-  );
-  </script>
+	var Content = React.createClass({
+		render: function(){
+				return (
+						<div className="content">{this.props.content}</div>
+				);
+		}
+	});
+	 
+	ReactDOM.render(
+		<ThreeDeepBreaths />,
+	document.getElementById('app')
+	);
+	</script>
 
 </body>
 </html>
