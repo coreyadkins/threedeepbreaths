@@ -8,9 +8,17 @@
 	<script src="https://unpkg.com/react@latest/dist/react.js"></script>
 	<script src="https://unpkg.com/react-dom@latest/dist/react-dom.js"></script>
 	<script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+	<link rel="stylesheet" href="inc/font-awesome/css/font-awesome.min.css">
 	<style>
+
+		* {
+			transition: all 2s linear;
+			line-height: 1;
+		}
+
 		body {
 			margin: 0;
+			overflow: hidden;
 		}
 
 		.breath-countdown {
@@ -23,13 +31,48 @@
 		}
 
 		.counter {
-			transition: all 2s linear;
-			/*transition: all 8s;*/
-			/*transition: all 2s;*/
+			width: 40vh;
+			padding: 5vh 0;
+			text-align: center;
+			line-height: 1;
+			border-radius: 50%;
 		}
 
-		.counter.fading-out {
+		.breathing-in .counter {
+			width: 120vh;
+			padding: 45vh 0;
+			background: rgba(255,255,255,.8);
+			box-sizing: border-box;
+		}
+
+		.breathing-out .counter {
+			width: 40vh;
+			padding: 5vh 0;
+		}
+
+		.counter.fading-out .counter-numbers {
 			opacity: 0;
+		}
+
+		.start-button {
+			font-size: 10vh;
+			cursor: pointer;
+			border: .07em black solid;
+			padding: .25em .5em;
+			transition: all 1s linear;
+		}
+
+		.start-button:hover {
+			background: #fff;
+		}
+
+		.content {
+			line-height: 0;
+		}
+
+		.video-embed {
+			width: 100vw;
+			height: 100vh;
 		}
 
 	</style>
@@ -40,48 +83,111 @@
 	var ThreeDeepBreaths = React.createClass({
 		getInitialState: function() {
 			return {
-				seconds: 0,
-				breathDuration: 8,
+				userHasStarted: false,
+				deciseconds: -10,
+				breathDuration: 140,
 				breathCount: 3
 			};
 		},
 
 		componentDidMount: function() {
-			setInterval(function() {
-				this.setState({
-					seconds: this.state.seconds + 1
-				});
-			}.bind(this),1000);
-		}, 
+			this.state.serverRequest = $.get(this.props.source, function (result) {
+				this.state.fetchedContent = result;
+				console.log(result);
+			}.bind(this));
+		},
 
 		componentWillUnmount: function() {
 			this.serverRequest.abort();
 		},
 
-		printBreath: function() {
-			return 1 + Math.floor( this.state.seconds / this.state.breathDuration );
+		startAfterButtonPress: function() {
+			this.setState({
+				userHasStarted: true
+			}, function() {
+
+			});
+
+			setTimeout(function() {
+				setInterval(function() {
+					this.setState({
+						deciseconds: this.state.deciseconds + 1
+					}, function() { console.log( this.state.deciseconds ); } );
+				}.bind(this),100);
+			}.bind(this),1000);
 		},
 
-		counterClass: function() {
+		getDecisecondsModulus: function() {
+			return this.state.deciseconds % this.state.breathDuration;
+		},
+
+		controlBackgroundClassByBreath: function() {
+
+			if( this.state.deciseconds <= 0 || this.state.deciseconds / this.state.breathDuration >= this.state.breathCount ) {
+				return 'breath-countdown';
+			}
+
 			var addClass = '';
-			if( this.state.seconds % this.state.breathDuration >= this.state.breathDuration * .75 ) {
+			if( this.getDecisecondsModulus() <= ( this.state.breathDuration / 2 ) - 1 ) {
+				addClass = ' breathing-in';
+			} else if( this.getDecisecondsModulus() <= this.state.breathDuration - 1 ) {
+				addClass = ' breathing-out';
+			}
+
+			return 'breath-countdown' + addClass;
+		},
+
+		printBreath: function() {
+			if( this.state.deciseconds < 0 ) {
+				return '';
+			}
+
+			return 1 + Math.floor( this.state.deciseconds / this.state.breathDuration );
+		},
+
+		controlCounterClassByBreath: function() {
+			var addClass = '';
+			if(
+				this.state.deciseconds <= 0 ||
+				this.getDecisecondsModulus() >= this.state.breathDuration * .75
+			) {
 				addClass = ' fading-out';
 			}
 
 			return 'counter' + addClass;
 		},
 
+		setTransitionDuration: function( ratioOfBreath ) {
+			if (typeof ratioOfBreath === 'undefined') { ratioOfBreath = 1/4; }
+			var transitionStyle = {
+				transition: 'all ' + this.state.breathDuration / 10 * ratioOfBreath + 's linear'
+			};
+
+			return transitionStyle;
+		},
+
 		render: function() {
-			if( this.state.seconds < this.state.breathDuration * this.state.breathCount ) {
+
+			if( this.state.userHasStarted === false ) {
 				return (
-					<div className="breath-countdown">
-						<div className={ this.counterClass() }>{ this.printBreath() }</div>
+					<div className={ this.controlBackgroundClassByBreath() }>
+						<Button clickHandler = { this.startAfterButtonPress } style={ this.setTransitionDuration() } />
+					</div>
+				);
+			}
+
+			if( this.state.deciseconds < this.state.breathDuration * this.state.breathCount ) {
+				return (
+					<div className={ this.controlBackgroundClassByBreath() }>
+						<div className={ this.controlCounterClassByBreath() } style={ this.setTransitionDuration( 1/2 ) }>
+							<div className="counter-numbers" style={ this.setTransitionDuration( 1/4 ) }>{ this.printBreath() }</div>
+						</div>
 					</div>
 				);
 			} else {
 				return (
-					<div className="breath-countdown">
-						<Content content="ayy" />
+					<div className={ this.controlBackgroundClassByBreath() }>
+						<Content style={ this.setTransitionDuration() } />
 					</div>
 				);
 			}
@@ -89,15 +195,23 @@
 	});
 
 	var Content = React.createClass({
-		render: function(){
+		render: function() {
 				return (
-						<div className="content">{this.props.content}</div>
+						<div id="content" className="content"><iframe className="video-embed" src="https://www.youtube.com/embed/BFKm4PKrNiA?autoplay=1&controls=0&loop=1&playlist=BFKm4PKrNiA&modestbranding=1&showinfo=0" frameBorder="0" allowFullScreen></iframe></div>
 				);
 		}
 	});
-	 
+
+	var Button = React.createClass({
+		render: function() {
+			return (
+				<div className="start-button" onClick={this.props.clickHandler} >Ready</div>
+			);
+		}
+	})
+
 	ReactDOM.render(
-		<ThreeDeepBreaths />,
+		<ThreeDeepBreaths source="https://wpshout.com/wp-json/wp/v2/posts" />,
 	document.getElementById('app')
 	);
 	</script>
